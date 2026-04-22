@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Report an issue — QuickAid Ghana{% endblock %}
+
+{# Inline errors only — no duplicate stack at top #}
+{% block page_alerts %}{% endblock %}
+
+{% block content %}
+  <div class="qa-report">
+    <div class="toast-container position-fixed bottom-0 end-0 p-3 p-md-4" style="z-index: 1080" aria-live="polite" aria-atomic="true">
+      {% if report_submitted %}
+        <div
+          id="qaReportToast"
+          class="toast align-items-center border-0 shadow-lg qa-report-toast text-bg-success"
+          role="status"
+          data-bs-autohide="true"
+          data-bs-delay="6200">
+          <div class="d-flex">
+            <div class="toast-body pe-4">
+              <p class="fw-semibold mb-1">Report received</p>
+              <p class="small mb-0 opacity-90">Thank you — your submission is pending review and will appear on the reports list.</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Dismiss"></button>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-4 g-xl-5 align-items-start">
+      <div class="col-xl-5">
+        <p class="qa-report-kicker mb-2">Citizen reporting</p>
+        <h1 class="h2 fw-bold text-white mb-3">Report an issue</h1>
+        <p class="text-secondary lead fs-6 mb-4">
+          Share accurate, timely signals about utilities, traffic, fuel queues, water, accidents, or flooding. Pin the spot on the map (search, your location, or click) so responders see it on the live map.
+        </p>
+        <ul class="list-unstyled qa-report-tips small text-secondary mb-0">
+          <li class="d-flex gap-2 mb-2">
+            <span class="text-accent fw-bold">·</span>
+            <span>Stay factual — describe what you saw and when.</span>
+          </li>
+          <li class="d-flex gap-2 mb-2">
+            <span class="text-accent fw-bold">·</span>
+            <span>Use search or “my location” on the form map — you do not need to type coordinates unless you prefer to.</span>
+          </li>
+          <li class="d-flex gap-2">
+            <span class="text-accent fw-bold">·</span>
+            <span>For emergencies requiring immediate response, call <a class="link-light" href="{% url 'core:sos' %}">SOS numbers</a>.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="col-xl-7">
+        <div class="qa-report-card">
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger border-0 rounded-3 mb-4" role="alert">
+              {% for err in form.non_field_errors %}
+                <div>{{ err }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <form
+            method="post"
+            class="qa-report-form{% if form.is_bound and form.errors %} was-validated{% endif %}"
+            novalidate>
+            {% csrf_token %}
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+              {{ form.category }}
+              {% if form.category.help_text %}
+                <div class="form-text">{{ form.category.help_text }}</div>
+              {% endif %}
+              {% for err in form.category.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+              {{ form.location }}
+              {% if form.location.help_text %}
+                <div class="form-text">{{ form.location.help_text }}</div>
+              {% endif %}
+              {% for err in form.location.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+              {{ form.description }}
+              {% if form.description.help_text %}
+                <div class="form-text">{{ form.description.help_text }}</div>
+              {% endif %}
+              {% for err in form.description.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="qa-report-coords rounded-3 p-3 p-md-4 mb-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <p class="small text-uppercase text-secondary fw-semibold qa-overline mb-1">Where on the map? (optional)</p>
+                  <p class="small text-secondary mb-0">
+                    Search Ghana, use your current location, or click the map. Coordinates fill in automatically for the live incident map.
+                  </p>
+                </div>
+                <a class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:map' %}">View map</a>
+              </div>
+              <div class="d-flex flex-column flex-sm-row gap-2 mb-2">
+                <label class="visually-hidden" for="qa-geocode-q">Search map</label>
+                <input
+                  type="search"
+                  id="qa-geocode-q"
+                  class="form-control qa-report-input"
+                  placeholder="e.g. Kumasi Central Market, Tema Motorway"
+                  autocomplete="off"
+                  maxlength="200">
+                <button type="button" class="btn btn-outline-light rounded-pill px-4 text-nowrap" id="qa-geocode-search">Search</button>
+              </div>
+              <div id="qa-geocode-results" class="d-flex flex-column gap-1 qa-geocode-results mb-2" hidden></div>
+              <p id="qa-location-msg" class="small mb-2 text-secondary" role="status"></p>
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" id="qa-btn-my-location">Use my current location</button>
+                <button type="button" class="btn btn-sm btn-link link-secondary text-decoration-none p-0 align-self-center" id="qa-btn-clear-location">Clear map pin</button>
+              </div>
+              <div
+                id="report-location-map"
+                class="qa-report-minimap mb-3"
+                data-geocode-url="{% url 'core:geocode' %}"
+                role="application"
+                aria-label="Map to choose incident coordinates"></div>
+              <p class="small text-secondary mb-3">Click the map or drag the pin to fine-tune. Leave empty if you only want to describe the place in text above.</p>
+              <details class="qa-report-coords-details border border-secondary border-opacity-25 rounded-3 p-3">
+                <summary class="small text-secondary user-select-none">Adjust latitude / longitude manually</summary>
+                <div class="row g-3 mt-1">
+                  <div class="col-md-6">
+                    <label class="form-label qa-report-label" for="{{ form.latitude.id_for_label }}">{{ form.latitude.label }}</label>
+                    {{ form.latitude }}
+                    {% if form.latitude.help_text %}
+                      <div class="form-text">{{ form.latitude.help_text }}</div>
+                    {% endif %}
+                    {% for err in form.latitude.errors %}
+                      <div class="invalid-feedback d-block">{{ err }}</div>
+                    {% endfor %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label qa-report-label" for="{{ form.longitude.id_for_label }}">{{ form.longitude.label }}</label>
+                    {{ form.longitude }}
+                    {% if form.longitude.help_text %}
+                      <div class="form-text">{{ form.longitude.help_text }}</div>
+                    {% endif %}
+                    {% for err in form.longitude.errors %}
+                      <div class="invalid-feedback d-block">{{ err }}</div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-sm-end pt-1">
+              <a class="btn btn-outline-secondary rounded-pill px-4 order-sm-0" href="{% url 'core:reports' %}">View reports</a>
+              <button class="btn btn-primary rounded-pill px-4 fw-semibold qa-report-submit order-sm-1" type="submit">Submit report</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+{% endblock %}
+
+{% block extra_js %}
+  {% if report_submitted %}
+    <script>
+      (function () {
+        var el = document.getElementById("qaReportToast");
+        if (!el || typeof bootstrap === "undefined" || !bootstrap.Toast) return;
+        var toast = new bootstrap.Toast(el, { autohide: true, delay: 6200 });
+        toast.show();
+      })();
+    </script>
+  {% endif %}
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="{% static 'js/qa-report-picker.js' %}"></script>
+{% endblock %}

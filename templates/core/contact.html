@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Contact — QuickAid Ghana{% endblock %}
+
+{% block page_alerts %}{% endblock %}
+
+{% block content %}
+  <div class="qa-contact">
+    <div class="toast-container position-fixed bottom-0 end-0 p-3 p-md-4" style="z-index: 1080" aria-live="polite" aria-atomic="true">
+      {% if feedback_submitted %}
+        <div
+          id="qaContactToast"
+          class="toast align-items-center border-0 shadow-lg qa-contact-toast text-bg-success"
+          role="status"
+          data-bs-autohide="true"
+          data-bs-delay="6200">
+          <div class="d-flex">
+            <div class="toast-body pe-4">
+              <p class="fw-semibold mb-1">Message received</p>
+              <p class="small mb-0 opacity-90">Thank you — we read every note and will follow up by email when it makes sense.</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Dismiss"></button>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-4 g-xl-5 align-items-start">
+      <div class="col-xl-5">
+        <p class="qa-report-kicker mb-2">QuickAid Ghana</p>
+        <h1 class="h2 fw-bold text-white mb-3">Let’s talk</h1>
+        <p class="text-secondary lead fs-6 mb-4">
+          Partnerships, media, product feedback, or a question about the platform — send a note. Your message is stored securely for our team to review.
+        </p>
+        <ul class="list-unstyled qa-contact-points small text-secondary mb-0">
+          <li class="d-flex gap-2 mb-3">
+            <span class="text-accent fw-bold" aria-hidden="true">·</span>
+            <span>We respond by email when your request needs a reply — no spam lists.</span>
+          </li>
+          <li class="d-flex gap-2 mb-3">
+            <span class="text-accent fw-bold" aria-hidden="true">·</span>
+            <span>For urgent danger or utilities on fire, use <a class="link-light" href="{% url 'core:sos' %}">SOS &amp; emergency lines</a> first.</span>
+          </li>
+          <li class="d-flex gap-2">
+            <span class="text-accent fw-bold" aria-hidden="true">·</span>
+            <span>Prefer self-serve? Try the <a class="link-light" href="{% url 'core:chatbot' %}">assistant</a> or the <a class="link-light" href="{% url 'core:map' %}">live map</a>.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="col-xl-7">
+        <div class="qa-contact-card">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+            <div>
+              <p class="small text-uppercase text-secondary fw-semibold qa-overline mb-1">Contact form</p>
+              <h2 class="h5 fw-bold text-white mb-0">Send us a message</h2>
+            </div>
+            <span class="badge rounded-pill qa-contact-badge">Usually within a few business days</span>
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger border-0 rounded-3 mb-4" role="alert">
+              {% for err in form.non_field_errors %}
+                <div>{{ err }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <form
+            method="post"
+            class="qa-contact-form{% if form.is_bound and form.errors %} was-validated{% endif %}"
+            novalidate>
+            {% csrf_token %}
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+              {{ form.name }}
+              {% if form.name.help_text %}
+                <div class="form-text">{{ form.name.help_text }}</div>
+              {% endif %}
+              {% for err in form.name.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.help_text %}
+                <div class="form-text">{{ form.email.help_text }}</div>
+              {% endif %}
+              {% for err in form.email.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label qa-report-label" for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
+              {{ form.message }}
+              {% if form.message.help_text %}
+                <div class="form-text">{{ form.message.help_text }}</div>
+              {% endif %}
+              {% for err in form.message.errors %}
+                <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-sm-end pt-1">
+              <a class="btn btn-outline-secondary rounded-pill px-4 order-sm-0" href="{% url 'core:home' %}">Back to home</a>
+              <button class="btn btn-primary rounded-pill px-4 fw-semibold qa-contact-submit order-sm-1" type="submit">Send message</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  {% if feedback_submitted %}
+    <script>
+      (function () {
+        var el = document.getElementById("qaContactToast");
+        if (!el || typeof bootstrap === "undefined" || !bootstrap.Toast) return;
+        var toast = new bootstrap.Toast(el, { autohide: true, delay: 6200 });
+        toast.show();
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

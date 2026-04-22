@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Django runtime
+*.sqlite3
+db.sqlite3
+media/*
+!media/.gitkeep
+staticfiles/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Tooling / editor
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+.vscode/
+.idea/
+
+# Cursor / local assistant artifacts
+.cursor/

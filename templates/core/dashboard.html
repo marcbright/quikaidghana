@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — QuickAid Ghana{% endblock %}
+
+{% block content %}
+  <div class="qa-dash">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4 pb-lg-1">
+      <div>
+        <p class="qa-dash-kicker mb-2">Operations</p>
+        <h1 class="h2 fw-bold text-white mb-2 mb-lg-1">Command centre</h1>
+        <p class="text-secondary mb-0">Live metrics · {% now "l j F Y" %} · Africa/Accra</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-light rounded-pill px-3" href="{% url 'core:reports' %}">All reports</a>
+        <a class="btn btn-primary rounded-pill px-3" href="{% url 'core:report' %}">New report</a>
+      </div>
+    </div>
+
+    {# Metric cards #}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 g-lg-4 mb-4 mb-lg-5">
+      <div class="col">
+        <article class="qa-dash-card qa-dash-card--accent h-100">
+          <div class="qa-dash-card-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </div>
+          <p class="qa-dash-card-label">Total reports today</p>
+          <p class="qa-dash-metric"><span class="qa-dash-count" data-qa-count="{{ reports_today }}">0</span></p>
+          <p class="qa-dash-card-hint mb-0">Submitted since midnight local</p>
+        </article>
+      </div>
+      <div class="col">
+        <article class="qa-dash-card h-100">
+          <div class="qa-dash-card-icon qa-dash-card-icon--amber" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 19h16M6 16h12M8 13h8M10 10h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <p class="qa-dash-card-label">Fuel alerts</p>
+          <p class="qa-dash-metric"><span class="qa-dash-count" data-qa-count="{{ fuel_alerts_today }}">0</span></p>
+          <p class="qa-dash-card-hint mb-0">Fuel queue · today</p>
+        </article>
+      </div>
+      <div class="col">
+        <article class="qa-dash-card h-100">
+          <div class="qa-dash-card-icon qa-dash-card-icon--blue" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 18h16M6 14h12M8 10h8M10 6h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <p class="qa-dash-card-label">Traffic reports</p>
+          <p class="qa-dash-metric"><span class="qa-dash-count" data-qa-count="{{ traffic_today }}">0</span></p>
+          <p class="qa-dash-card-hint mb-0">Traffic category · today</p>
+        </article>
+      </div>
+      <div class="col">
+        <article class="qa-dash-card h-100">
+          <div class="qa-dash-card-icon qa-dash-card-icon--violet" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </div>
+          <p class="qa-dash-card-label">Dumsor reports</p>
+          <p class="qa-dash-metric"><span class="qa-dash-count" data-qa-count="{{ dumsor_today }}">0</span></p>
+          <p class="qa-dash-card-hint mb-0">Power &amp; outages · today</p>
+        </article>
+      </div>
+      <div class="col">
+        <article class="qa-dash-card h-100">
+          <div class="qa-dash-card-icon qa-dash-card-icon--green" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-6-5-6-10a6 6 0 1 1 12 0c0 5-6 10-6 10z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="11" r="2" fill="currentColor"/></svg>
+          </div>
+          <p class="qa-dash-card-label">Hospitals nearby</p>
+          <p class="qa-dash-metric"><span class="qa-dash-count" data-qa-count="{{ hospitals_nearby }}">0</span></p>
+          <p class="qa-dash-card-hint mb-0">Geotagged · {{ hospitals_total }} listed total</p>
+        </article>
+      </div>
+    </div>
+
+    {# Charts + status #}
+    <div class="row g-4 mb-4 mb-lg-5">
+      <div class="col-lg-8">
+        <div class="qa-dash-panel h-100">
+          <div class="qa-dash-panel-head">
+            <div>
+              <h2 class="h6 text-white mb-1">Report volume</h2>
+              <p class="small text-secondary mb-0">Last 14 days · Accra calendar</p>
+            </div>
+          </div>
+          <div class="qa-dash-panel-body">
+            <div class="qa-dash-chart-wrap">
+              <canvas id="qaDashLine" aria-label="Line chart of reports per day"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 d-flex flex-column gap-4">
+        <div class="qa-dash-panel flex-grow-1">
+          <div class="qa-dash-panel-head">
+            <div>
+              <h2 class="h6 text-white mb-1">Category mix</h2>
+              <p class="small text-secondary mb-0">All-time share</p>
+            </div>
+          </div>
+          <div class="qa-dash-panel-body">
+            <div class="qa-dash-chart-wrap qa-dash-chart-wrap--donut">
+              <canvas id="qaDashDoughnut" aria-label="Doughnut chart of reports by category"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="qa-dash-panel">
+          <div class="qa-dash-panel-head border-0 pb-0">
+            <h2 class="h6 text-white mb-0">By status</h2>
+          </div>
+          <ul class="list-group list-group-flush qa-dash-status-list border-0">
+            {% for row in reports_by_status %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="small">{{ row.label }}</span>
+                <span class="badge rounded-pill qa-dash-pill">{{ row.total }}</span>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-secondary small">No reports yet.</li>
+            {% endfor %}
+          </ul>
+          <div class="px-3 pb-3 small text-secondary">
+            {{ reports_pending }} pending · {{ reports_total }} all-time
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Latest reports #}
+    <div class="qa-dash-panel">
+      <div class="qa-dash-panel-head flex-wrap gap-2">
+        <div>
+          <h2 class="h6 text-white mb-1">Latest reports</h2>
+          <p class="small text-secondary mb-0">Newest first · auto-refresh on navigation</p>
+        </div>
+        <a class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:map' %}">Open map</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-borderless qa-dash-table mb-0 align-middle">
+          <thead>
+            <tr>
+              <th scope="col" class="text-secondary small fw-semibold text-uppercase">When</th>
+              <th scope="col" class="text-secondary small fw-semibold text-uppercase">Category</th>
+              <th scope="col" class="text-secondary small fw-semibold text-uppercase">Location</th>
+              <th scope="col" class="text-secondary small fw-semibold text-uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recent_reports %}
+              <tr class="qa-dash-table-row">
+                <td class="text-secondary small text-nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="text-white">{{ r.get_category_display }}</td>
+                <td class="text-secondary">{{ r.location|truncatechars:42 }}</td>
+                <td><span class="badge rounded-pill qa-dash-badge">{{ r.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-secondary px-3 py-5 text-center">No reports yet — <a href="{% url 'core:report' %}">submit the first one</a>.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {{ chart_day_labels|json_script:"qa-dash-line-labels" }}
+  {{ chart_day_values|json_script:"qa-dash-line-values" }}
+  {{ chart_cat_labels|json_script:"qa-dash-cat-labels" }}
+  {{ chart_cat_values|json_script:"qa-dash-cat-values" }}
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <script>
+    (function () {
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function readJson(id) {
+        var el = document.getElementById(id);
+        if (!el || !el.textContent) return null;
+        try {
+          return JSON.parse(el.textContent);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function animateCount(el, target, duration) {
+        target = Number(target) || 0;
+        if (reduceMotion) {
+          el.textContent = String(target);
+          return;
+        }
+        var start = performance.now();
+        function frame(now) {
+          var t = Math.min(1, (now - start) / duration);
+          el.textContent = String(Math.round(target * easeOutCubic(t)));
+          if (t < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      document.querySelectorAll("[data-qa-count]").forEach(function (el, i) {
+        var raw = el.getAttribute("data-qa-count");
+        var target = parseInt(raw, 10);
+        if (isNaN(target)) target = 0;
+        el.textContent = "0";
+        setTimeout(function () {
+          animateCount(el, target, 900 + i * 70);
+        }, 120 + i * 40);
+      });
+
+      var lineLabels = readJson("qa-dash-line-labels");
+      var lineValues = readJson("qa-dash-line-values");
+      var catLabels = readJson("qa-dash-cat-labels");
+      var catValues = readJson("qa-dash-cat-values");
+
+      if (typeof Chart === "undefined") return;
+
+      var grid = "rgba(148, 163, 184, 0.12)";
+      var tick = "#94a3b8";
+      Chart.defaults.color = tick;
+      Chart.defaults.borderColor = grid;
+
+      var lineCtx = document.getElementById("qaDashLine");
+      if (lineCtx && lineLabels && lineValues) {
+        var grad = lineCtx.getContext("2d").createLinearGradient(0, 0, 0, 240);
+        grad.addColorStop(0, "rgba(59, 130, 246, 0.45)");
+        grad.addColorStop(1, "rgba(59, 130, 246, 0)");
+
+        new Chart(lineCtx, {
+          type: "line",
+          data: {
+            labels: lineLabels,
+            datasets: [
+              {
+                label: "Reports",
+                data: lineValues,
+                fill: true,
+                backgroundColor: grad,
+                borderColor: "rgba(59, 130, 246, 0.95)",
+                borderWidth: 2,
+                tension: 0.35,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: "#fff",
+                pointBorderColor: "rgba(59, 130, 246, 1)",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: reduceMotion ? false : { duration: 1000 },
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grid } },
+            },
+          },
+        });
+      }
+
+      var donutCtx = document.getElementById("qaDashDoughnut");
+      if (donutCtx && catLabels && catValues) {
+        var sum = catValues.reduce(function (a, b) {
+          return a + b;
+        }, 0);
+        var labels = catLabels;
+        var values = catValues;
+        if (sum === 0) {
+          labels = ["No data yet"];
+          values = [1];
+        }
+        var emptyPalette = ["rgba(148, 163, 184, 0.35)"];
+        var palette = [
+          "rgba(59, 130, 246, 0.85)",
+          "rgba(249, 115, 22, 0.88)",
+          "rgba(34, 197, 94, 0.85)",
+          "rgba(168, 85, 247, 0.85)",
+          "rgba(244, 63, 94, 0.8)",
+          "rgba(234, 179, 8, 0.88)",
+        ];
+        var colors =
+          sum === 0
+            ? emptyPalette
+            : values.map(function (_, i) {
+                return palette[i % palette.length];
+              });
+
+        new Chart(donutCtx, {
+          type: "doughnut",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: values,
+                backgroundColor: colors,
+                borderWidth: 0,
+                hoverOffset: reduceMotion ? 0 : 8,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            animation: reduceMotion ? false : { duration: 900 },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { boxWidth: 10, padding: 12, font: { size: 11 } },
+              },
+            },
+          },
+        });
+      }
+    })();
+  </script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}SOS — Emergency numbers — QuickAid Ghana{% endblock %}
+
+{% block main_class %}qa-main qa-main--sos flex-grow-1{% endblock %}
+
+{% block content %}
+  <div class="qa-sos-page">
+    <header class="qa-sos-hero mb-4 mb-lg-5">
+      <div class="row g-4 align-items-end">
+        <div class="col-lg-8">
+          <p class="qa-sos-kicker text-uppercase small fw-semibold text-secondary mb-2">Emergency</p>
+          <h1 class="h2 fw-bold text-white mb-2">Tap to call</h1>
+          <p class="text-secondary lead fs-6 mb-0" style="max-width: 40rem;">
+            Large cards for the services people reach for first. Numbers from your admin directory when they match;
+            otherwise common public Ghana lines are shown so the page is always usable.
+          </p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <a class="btn btn-outline-light rounded-pill px-4" href="{% url 'core:chatbot' %}">Ask assistant</a>
+          <a class="btn btn-primary rounded-pill px-4 ms-lg-2 mt-2 mt-lg-0" href="{% url 'core:report' %}">Report issue</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="qa-sos-grid mb-4 mb-lg-5" aria-label="Primary emergency services">
+      <div class="row g-3 g-md-4">
+        {% for card in sos_cards %}
+          <div class="col-12 col-md-6 col-xl-4">
+            <a
+              class="qa-sos-card qa-sos-card--{{ card.key }} text-decoration-none d-flex flex-column h-100 position-relative"
+              href="{{ card.tel_href }}"
+              {% if card.tel_href == "#" %}aria-disabled="true" tabindex="-1"{% endif %}>
+              <div class="qa-sos-card__top d-flex align-items-start justify-content-between gap-3">
+                <div>
+                  <span class="qa-sos-card__icon" aria-hidden="true">
+                    {% if card.key == "police" %}🛡️{% elif card.key == "fire" %}🔥{% elif card.key == "ambulance" %}🚑{% elif card.key == "ecg" %}⚡{% else %}💧{% endif %}
+                  </span>
+                  <h2 class="h5 fw-bold text-white mt-2 mb-1">{{ card.title }}</h2>
+                  <p class="small text-secondary mb-0 qa-sos-card__hint">{{ card.subtitle }}</p>
+                </div>
+                <span class="badge rounded-pill qa-sos-card__badge align-self-start">
+                  {% if card.from_database %}Admin{% else %}Preset{% endif %}
+                </span>
+              </div>
+              <p class="qa-sos-card__phone font-monospace mb-0 mt-auto pt-4">{{ card.phone_display }}</p>
+              {% if card.from_database and card.directory_line %}
+                <p class="small text-secondary opacity-75 mb-0 mt-2">{{ card.directory_line }}</p>
+              {% endif %}
+              <span class="qa-sos-card__cta small fw-semibold mt-3">Tap to call</span>
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if sos_extras %}
+      <section class="qa-sos-panel rounded-4 p-4 p-md-4 mb-4 mb-lg-5" aria-label="Additional helplines">
+        <h2 class="h6 fw-bold text-white mb-3">Other helplines in your directory</h2>
+        <ul class="list-unstyled row row-cols-1 row-cols-md-2 g-3 mb-0">
+          {% for row in sos_extras %}
+            <li class="col">
+              <a class="qa-sos-extra d-flex justify-content-between align-items-center gap-3 text-decoration-none" href="{{ row.tel_href }}">
+                <span class="text-body">{{ row.contact.service_name }}</span>
+                <span class="font-monospace text-accent fw-semibold text-nowrap">{{ row.contact.phone_number }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <section class="qa-sos-panel rounded-4 p-4 p-md-4 mb-4" aria-label="Hospitals with phone numbers">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h6 fw-bold text-white mb-0">Hospitals</h2>
+        <a class="small link-light text-decoration-none" href="{% url 'core:map' %}">View map</a>
+      </div>
+      {% if hospitals %}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+          {% for h in hospitals %}
+            <div class="col">
+              <article class="qa-sos-hospital h-100 d-flex flex-column">
+                <h3 class="h6 fw-semibold text-white mb-1">{{ h.name }}</h3>
+                <p class="small text-secondary mb-2 flex-grow-1">{{ h.location }}</p>
+                {% if h.phone %}
+                  <a class="btn btn-sm btn-outline-light rounded-pill align-self-start" href="tel:{{ h.phone|cut:' ' }}">Call {{ h.phone }}</a>
+                {% else %}
+                  <span class="small text-secondary">No phone on file</span>
+                {% endif %}
+              </article>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-secondary small mb-0">No hospitals yet — add them in admin to show here.</p>
+      {% endif %}
+    </section>
+
+    <p class="small text-secondary text-center mb-0 px-2" style="max-width: 48rem; margin-inline: auto;">
+      For life-threatening emergencies, use the national short codes when appropriate. QuickAid does not dispatch services —
+      always follow official operator instructions. Default lines are for convenience; confirm with authorities for your area.
+    </p>
+  </div>
+{% endblock %}

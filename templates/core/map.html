@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Live map — QuickAid Ghana{% endblock %}
+
+{% block main_class %}qa-main qa-main--map flex-grow-1{% endblock %}
+{% block main_inner %}container-fluid px-0{% endblock %}
+
+{# No qa-animate-in parent: CSS transforms break Leaflet tile positioning. #}
+{% block content_outer %}
+  <div class="qa-map-page">
+    <div class="px-3 px-md-4 pt-3 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+      <div>
+        <h1 class="h4 fw-bold text-white mb-1">Live incident map</h1>
+        <p class="text-secondary small mb-0">
+          OSM data · CARTO light tiles · {{ report_markers|length }} geo report{% if report_markers|length != 1 %}s{% endif %}
+          {% if hospital_markers %}· {{ hospital_markers|length }} hospital{% if hospital_markers|length != 1 %}s{% endif %}{% endif %}
+          {% if reports_missing_coords %}
+            <span class="text-warning ms-1">· {{ reports_missing_coords }} without coordinates</span>
+          {% endif %}
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:reports' %}">All reports</a>
+        <a class="btn btn-sm btn-primary rounded-pill" href="{% url 'core:report' %}">Report issue</a>
+      </div>
+    </div>
+
+    {{ report_markers|json_script:"qa-report-markers" }}
+    {{ hospital_markers|json_script:"qa-hospital-markers" }}
+
+    <div class="qa-map-shell position-relative mx-0 mx-md-3 mb-3 mb-md-4 border border-secondary-subtle shadow-lg">
+      <aside class="qa-map-legend" aria-label="Marker legend">
+        <p class="qa-map-legend-title text-uppercase small fw-semibold text-secondary mb-2">Reports</p>
+        <ul class="list-unstyled small mb-0 qa-map-legend-list">
+          <li><span class="qa-map-dot qa-map-dot--accident"></span> Accident</li>
+          <li><span class="qa-map-dot qa-map-dot--fuel"></span> Fuel queue</li>
+          <li><span class="qa-map-dot qa-map-dot--water"></span> Water</li>
+          <li><span class="qa-map-dot qa-map-dot--dumsor"></span> Dumsor</li>
+          <li><span class="qa-map-dot qa-map-dot--traffic"></span> Traffic</li>
+          <li><span class="qa-map-dot qa-map-dot--flooding"></span> Flooding</li>
+        </ul>
+        <p class="qa-map-legend-title text-uppercase small fw-semibold text-secondary mt-3 mb-2">Other</p>
+        <ul class="list-unstyled small mb-0">
+          <li><span class="qa-map-dot qa-map-dot--hospital"></span> Hospital</li>
+        </ul>
+      </aside>
+      <div id="qa-map" class="qa-map-canvas" role="application" aria-label="Interactive map of incidents"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script>
+    (function () {
+      function readJson(id) {
+        var el = document.getElementById(id);
+        if (!el || !el.textContent) return [];
+        try {
+          return JSON.parse(el.textContent);
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function escapeHtml(str) {
+        if (str == null) return "";
+        var d = document.createElement("div");
+        d.textContent = String(str);
+        return d.innerHTML;
+      }
+
+      function formatWhen(iso) {
+        if (!iso) return "";
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return escapeHtml(iso);
+          return escapeHtml(d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }));
+        } catch (e) {
+          return escapeHtml(iso);
+        }
+      }
+
+      var CATEGORY_STYLES = {
+        accident: { fill: "#ef4444", stroke: "#fecaca" },
+        fuel_queue: { fill: "#eab308", stroke: "#fef08a" },
+        water_shortage: { fill: "#3b82f6", stroke: "#bfdbfe" },
+        dumsor: { fill: "#0f172a", stroke: "#94a3b8" },
+        traffic: { fill: "#f97316", stroke: "#fed7aa" },
+        flooding: { fill: "#22c55e", stroke: "#bbf7d0" },
+      };
+
+      function styleForCategory(key) {
+        return CATEGORY_STYLES[key] || { fill: "#64748b", stroke: "#e2e8f0" };
+      }
+
+      function reportPopupHtml(r) {
+        var cat = escapeHtml(r.category || "");
+        var loc = escapeHtml(r.location || "");
+        var st = escapeHtml(r.status || "");
+        var desc = escapeHtml(r.description || "").replace(/\n/g, "<br>");
+        var when = formatWhen(r.created_at);
+        return (
+          '<div class="qa-map-popup">' +
+          '<p class="qa-map-popup-cat fw-semibold small mb-1">' +
+          cat +
+          "</p>" +
+          '<p class="qa-map-popup-loc fw-semibold mb-2">' +
+          loc +
+          "</p>" +
+          '<p class="qa-map-popup-meta small mb-2">' +
+          when +
+          " · <span class=\"text-body-secondary\">" +
+          st +
+          "</span></p>" +
+          '<p class="qa-map-popup-desc small mb-0">' +
+          (desc || "<em>No description</em>") +
+          "</p>" +
+          "</div>"
+        );
+      }
+
+      function hospitalPopupHtml(h) {
+        return (
+          '<div class="qa-map-popup">' +
+          '<p class="qa-map-popup-hospital fw-semibold small mb-1">Hospital</p>' +
+          '<p class="qa-map-popup-hospital-name mb-1">' +
+          escapeHtml(h.name || "") +
+          "</p>" +
+          '<p class="qa-map-popup-hospital-loc small mb-0">' +
+          escapeHtml(h.location || "") +
+          "</p>" +
+          "</div>"
+        );
+      }
+
+      function initMap() {
+        var reports = readJson("qa-report-markers");
+        var hospitals = readJson("qa-hospital-markers");
+        var el = document.getElementById("qa-map");
+        if (!el) return;
+        if (typeof L === "undefined") {
+          console.error("QuickAid map: Leaflet failed to load.");
+          el.innerHTML =
+            '<p class="text-secondary small p-4 m-0">Map library could not load. Check your network or ad-blocker, then refresh.</p>';
+          return;
+        }
+
+        if (el._leaflet_id) return;
+
+        var ghanaCenter = [7.9465, -1.0232];
+        var map = L.map(el, {
+          zoomControl: true,
+          attributionControl: true,
+          scrollWheelZoom: true,
+          preferCanvas: false,
+        }).setView(ghanaCenter, 6.5);
+
+        var shell = el.closest(".qa-map-shell");
+        function activeTheme() {
+          return document.documentElement.getAttribute("data-bs-theme") === "light" ? "light" : "dark";
+        }
+        function popupClassName() {
+          return activeTheme() === "light" ? "qa-leaflet-popup qa-leaflet-popup--light" : "qa-leaflet-popup";
+        }
+
+        // Do not use tile.openstreetmap.org — volunteer tiles block many embeds (403 / Referer policy).
+        var baseLayer = L.tileLayer(
+          activeTheme() === "light"
+            ? "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png"
+            : "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png",
+          {
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> ' +
+              '&copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: "abcd",
+            maxZoom: 20,
+          }
+        ).addTo(map);
+
+        function syncShellTheme() {
+          if (!shell) return;
+          shell.classList.toggle("qa-map-shell--light", activeTheme() === "light");
+        }
+        syncShellTheme();
+
+        var bounds = [];
+        var layerHospitals = L.layerGroup().addTo(map);
+        var layerReports = L.layerGroup().addTo(map);
+
+        hospitals.forEach(function (h) {
+          if (h.lat == null || h.lng == null) return;
+          var m = L.circleMarker([h.lat, h.lng], {
+            radius: 8,
+            color: "#cbd5e1",
+            weight: 2,
+            fillColor: "#475569",
+            fillOpacity: 0.92,
+          });
+          m.bindPopup(hospitalPopupHtml(h), { maxWidth: 280, className: popupClassName() });
+          m.addTo(layerHospitals);
+          bounds.push([h.lat, h.lng]);
+        });
+
+        reports.forEach(function (r) {
+          if (r.lat == null || r.lng == null) return;
+          var lat = Number(r.lat);
+          var lng = Number(r.lng);
+          if (isNaN(lat) || isNaN(lng)) return;
+          var st = styleForCategory(r.category_key);
+          var m = L.circleMarker([lat, lng], {
+            radius: 12,
+            color: st.stroke,
+            weight: 2,
+            fillColor: st.fill,
+            fillOpacity: 0.95,
+          });
+          m.bindPopup(reportPopupHtml(r), { maxWidth: 320, className: popupClassName() });
+          m.addTo(layerReports);
+          bounds.push([lat, lng]);
+        });
+
+        if (bounds.length) {
+          map.fitBounds(bounds, { padding: [56, 56], maxZoom: bounds.length <= 8 ? 13 : 14 });
+        }
+
+        window.addEventListener("qa:themechange", function () {
+          var isLight = activeTheme() === "light";
+          syncShellTheme();
+          baseLayer.setUrl(
+            isLight
+              ? "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png"
+              : "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png"
+          );
+          map.eachLayer(function (layer) {
+            if (layer && layer.getPopup && layer.getPopup()) {
+              layer.bindPopup(layer.getPopup().getContent(), { maxWidth: layer.getPopup().options.maxWidth || 320, className: popupClassName() });
+            }
+          });
+        });
+
+        function invalidate() {
+          map.invalidateSize(true);
+        }
+        invalidate();
+        setTimeout(invalidate, 100);
+        setTimeout(invalidate, 400);
+        setTimeout(invalidate, 900);
+        window.addEventListener("resize", invalidate);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initMap);
+      } else {
+        requestAnimationFrame(initMap);
+      }
+    })();
+  </script>
+{% endblock %}

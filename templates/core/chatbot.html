@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assistant — QuickAid Ghana{% endblock %}
+
+{% block main_class %}qa-main qa-main--chat flex-grow-1 d-flex flex-column min-vh-0{% endblock %}
+{% block main_inner %}container-fluid px-3 px-md-4 py-3 flex-grow-1 d-flex flex-column min-vh-0{% endblock %}
+
+{% block content %}
+  <div
+    id="qa-chat-root"
+    class="qa-chat d-flex flex-column flex-grow-1 min-vh-0"
+    data-reply-url="{% url 'core:chatbot_reply' %}"
+    data-csrf="{{ csrf_token }}">
+    <header class="qa-chat-header mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <p class="qa-chat-kicker text-uppercase small fw-semibold text-secondary mb-1">On-device routing</p>
+          <h1 class="h4 fw-bold text-white mb-1">QuickAid Assistant</h1>
+          <p class="text-secondary small mb-0" style="max-width: 36rem;">
+            Keyword logic on your own reports and hospitals — no paid API. Ask about power, fuel, traffic, water, hospitals, or helplines.
+          </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:map' %}">Map</a>
+          <a class="btn btn-sm btn-primary rounded-pill" href="{% url 'core:report' %}">Report</a>
+        </div>
+      </div>
+    </header>
+
+    <div id="qa-chat-log" class="qa-chat-log flex-grow-1 mb-3" role="log" aria-relevant="additions" aria-live="polite">
+      <div class="qa-chat-row qa-chat-row--bot">
+        <div class="qa-chat-bubble qa-chat-bubble--bot">
+          <p class="mb-0">
+            Hi — try <strong class="text-info">hospital near me</strong>, <strong class="text-info">light off</strong>,
+            <strong class="text-info">fuel nearby</strong>, or <strong class="text-info">traffic Accra</strong>.
+            I pull answers from the QuickAid database.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="small text-secondary mb-2">Suggestions</p>
+    <div id="qa-chat-chips" class="d-flex flex-wrap gap-2 mb-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">hospital near me</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">light off</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">fuel nearby</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">traffic accra</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">water shortage</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill qa-chat-chip">SOS numbers</button>
+    </div>
+
+    <form id="qa-chat-form" class="qa-chat-form mt-auto" autocomplete="off">
+      <label class="visually-hidden" for="qa-chat-input">Message</label>
+      <div class="input-group input-group-lg qa-chat-input-group shadow-lg">
+        <input
+          id="qa-chat-input"
+          type="text"
+          class="form-control qa-chat-input"
+          placeholder="Ask in plain English…"
+          maxlength="500"
+          name="message">
+        <button class="btn btn-primary px-4 fw-semibold" type="submit">Send</button>
+      </div>
+      <p class="small text-secondary mt-2 mb-0">Not a medical diagnosis or emergency dispatch — use SOS for national helplines.</p>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/qa-chatbot.js' %}"></script>
+{% endblock %}

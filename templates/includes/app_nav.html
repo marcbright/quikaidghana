@@ -1,0 +1,35 @@
+<ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1 mt-3 mt-lg-0">
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/' %} active{% endif %}" href="{% url 'core:home' %}">Home</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/dashboard/' %} active{% endif %}" href="{% url 'core:dashboard' %}">Dashboard</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/report/' %} active{% endif %}" href="{% url 'core:report' %}">Report</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/map/' %} active{% endif %}" href="{% url 'core:map' %}">Map</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/chatbot/' %} active{% endif %}" href="{% url 'core:chatbot' %}">Chatbot</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/sos/' %} active{% endif %}" href="{% url 'core:sos' %}">SOS</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/contact/' %} active{% endif %}" href="{% url 'core:contact' %}">Contact</a>
+  </li>
+  <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+    <button
+      id="qa-theme-toggle"
+      class="btn btn-sm qa-theme-toggle rounded-pill"
+      type="button"
+      aria-label="Toggle theme"
+      aria-pressed="false"
+      title="Toggle theme">
+      <span class="qa-theme-toggle-icon" data-theme-icon aria-hidden="true">🌙</span>
+      <span class="qa-theme-toggle-text" data-theme-label>Dark</span>
+    </button>
+  </li>
+</ul>

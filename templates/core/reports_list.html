@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Incidents — QuickAid Ghana{% endblock %}
+
+{% block content %}
+  <div class="qa-reports" data-qa-auto-refresh="90" data-qa-auto-refresh-note="Reloads while tab is visible if you are not typing in filters.">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+      <div>
+        <p class="qa-reports-kicker mb-2">Community feed</p>
+        <h1 class="h2 fw-bold text-white mb-2">Submitted incidents</h1>
+        <p class="text-secondary mb-0">
+          {% if total_in_db %}
+            <span class="fw-semibold text-white">{{ page_obj.paginator.count }}</span>
+            {% if page_obj.paginator.count == 1 %}incident matches{% else %}incidents match{% endif %} your view
+            {% if has_filters %}
+              <span class="text-secondary"> · </span><span class="text-accent">{{ total_in_db }}</span><span class="text-secondary"> total in system</span>
+            {% endif %}
+          {% else %}
+            No incidents in the database yet.
+          {% endif %}
+        </p>
+      </div>
+      <a class="btn btn-primary rounded-pill px-4 fw-semibold" href="{% url 'core:report' %}">New report</a>
+    </div>
+
+    <form
+      method="get"
+      class="qa-reports-filters card border-secondary-subtle mb-4 mb-lg-5"
+      role="search"
+      aria-label="Filter incidents">
+      <div class="card-body p-3 p-md-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-5 col-lg-5">
+            <label class="form-label small text-secondary fw-semibold mb-1" for="id_q">Search by location</label>
+            <input
+              type="search"
+              name="q"
+              id="id_q"
+              class="form-control qa-reports-input"
+              placeholder="Neighbourhood, junction, landmark…"
+              value="{{ search_q }}"
+              autocomplete="off">
+          </div>
+          <div class="col-12 col-md-4 col-lg-4">
+            <label class="form-label small text-secondary fw-semibold mb-1" for="id_category">Category</label>
+            <select name="category" id="id_category" class="form-select qa-reports-input">
+              <option value="">All categories</option>
+              {% for value, label in category_choices %}
+                <option value="{{ value }}"{% if filter_category == value %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-3 col-lg-3 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-light rounded-pill px-4 fw-semibold flex-grow-1">Apply</button>
+            {% if has_filters %}
+              <a class="btn btn-outline-secondary rounded-pill px-3" href="{% url 'core:reports' %}">Clear</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </form>
+
+    {% if page_obj.paginator.count == 0 %}
+      <div class="qa-reports-empty text-center py-5 px-3 rounded-4 border border-secondary-subtle">
+        {% if total_in_db == 0 %}
+          <div class="qa-reports-empty-icon mx-auto mb-4" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+          </div>
+          <h2 class="h4 text-white mb-2">No incidents yet</h2>
+          <p class="text-secondary mx-auto mb-4" style="max-width: 26rem;">
+            When citizens start reporting outages, traffic, or utilities, they will appear here as beautiful cards with timestamps.
+          </p>
+          <a class="btn btn-primary rounded-pill px-4 fw-semibold" href="{% url 'core:report' %}">Submit the first report</a>
+        {% else %}
+          <div class="qa-reports-empty-icon mx-auto mb-4" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M20 20l-3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2 class="h4 text-white mb-2">No matching incidents</h2>
+          <p class="text-secondary mx-auto mb-4" style="max-width: 26rem;">
+            Try a different keyword or reset the category filter — your search is too narrow for what we have on file.
+          </p>
+          <a class="btn btn-outline-light rounded-pill px-4" href="{% url 'core:reports' %}">Clear filters</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        {% for r in page_obj %}
+          <div class="col">
+            <article class="qa-reports-card h-100 d-flex flex-column">
+              <div class="qa-reports-card-top d-flex justify-content-between align-items-start gap-2 mb-3">
+                <span class="badge rounded-pill qa-reports-cat">{{ r.get_category_display }}</span>
+                {% if r.latitude and r.longitude %}
+                  <span class="qa-reports-pin text-secondary small" title="Has coordinates for map">
+                    <span class="text-accent" aria-hidden="true">◎</span> Map
+                  </span>
+                {% endif %}
+              </div>
+              <h2 class="h6 text-white mb-2">{{ r.location }}</h2>
+              <p class="text-secondary small flex-grow-1 mb-3">{{ r.description|truncatechars:140 }}</p>
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-auto pt-2 border-top border-secondary-subtle">
+                <span class="badge rounded-pill qa-reports-status">{{ r.get_status_display }}</span>
+                <time class="small text-secondary text-nowrap" datetime="{{ r.created_at|date:'c' }}">
+                  {{ r.created_at|date:"D j M Y" }} · {{ r.created_at|time:"H:i" }}
+                </time>
+              </div>
+            </article>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if page_obj.has_other_pages %}
+        <nav class="mt-4 pt-2" aria-label="Reports pagination">
+          <ul class="pagination pagination-sm justify-content-center flex-wrap gap-1 mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link rounded-pill px-3" href="?{% if extra_query %}{{ extra_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+              </li>
+            {% endif %}
+            <li class="page-item disabled">
+              <span class="page-link border-0 bg-transparent text-secondary">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link rounded-pill px-3" href="?{% if extra_query %}{{ extra_query }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endblock %}

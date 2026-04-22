@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}QuickAid Ghana — Stay Safe. Stay Connected.{% endblock %}
+
+{% block content %}
+  <div class="qa-landing">
+    {{ incident_feed|json_script:"qa-home-incident-feed" }}
+    {# --- Hero --- #}
+    <section class="qa-hero mb-5" aria-labelledby="qa-hero-heading">
+      <div class="row align-items-center g-5">
+        <div class="col-xl-6">
+          <p class="qa-section-kicker mb-3">QuickAid Ghana</p>
+          <h1
+            id="qa-hero-heading"
+            class="qa-hero-title display-5 display-md-4 fw-bold text-white mb-4"
+            aria-label="Stay Safe. Stay Connected. Ghana Moves Smarter.">
+            <span class="qa-line">
+              <span id="qa-hero-typed" data-typing-text="Stay Safe. Stay Connected." data-typing-speed="36"></span><span class="qa-typing-caret" aria-hidden="true"></span>
+            </span>
+            <span class="qa-line qa-gradient-text">Ghana Moves Smarter.</span>
+          </h1>
+          <p class="qa-hero-sub text-secondary mb-4 mb-lg-5">
+            Real-time emergency help, utility alerts, live reports and smart support in one place.
+          </p>
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+            <a class="btn btn-primary qa-btn-hero-primary" href="{% url 'core:dashboard' %}">Get Started</a>
+            <a class="btn qa-btn-hero-secondary" href="{% url 'core:report' %}">Report Issue</a>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center small text-secondary mb-3">
+            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle px-3 py-2">Dumsor &amp; utilities</span>
+            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle px-3 py-2">Traffic &amp; fuel</span>
+            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle px-3 py-2">Water &amp; flooding</span>
+            <a class="text-decoration-none ms-lg-2" href="{% url 'core:map' %}"><span class="text-accent">Live map</span> →</a>
+          </div>
+
+          <div class="qa-home-cities mb-3" aria-label="Quick city filters">
+            {% for c in city_chips %}
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary rounded-pill qa-home-city-chip{% if forloop.first %} is-active{% endif %}"
+                data-city-query="{{ c.query }}"
+                data-city-label="{{ c.label }}">
+                {{ c.label }}
+              </button>
+            {% endfor %}
+          </div>
+
+          <section class="qa-near-me p-3 rounded-3 mb-3" aria-labelledby="qa-near-me-title">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <p id="qa-near-me-title" class="small text-white fw-semibold mb-1">Near me now</p>
+                <p id="qa-near-me-status" class="small text-secondary mb-0">Use your location to see the nearest live incident reports.</p>
+              </div>
+              <button type="button" id="qa-btn-near-me" class="btn btn-sm btn-outline-info rounded-pill text-nowrap">Use my location</button>
+            </div>
+            <ul id="qa-near-me-list" class="list-unstyled mb-0 d-grid gap-2"></ul>
+          </section>
+
+          <section class="qa-home-personal p-3 rounded-3" aria-labelledby="qa-home-personal-title">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <p id="qa-home-personal-title" class="small text-white fw-semibold mb-1">Personalized actions</p>
+                <p id="qa-home-fav-status" class="small text-secondary mb-0">Save places you care about and get quick routes to live incidents.</p>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mb-2">
+              <label class="visually-hidden" for="qa-home-fav-input">Add favorite location</label>
+              <input id="qa-home-fav-input" type="text" class="form-control form-control-sm" placeholder="Add favorite location (e.g. Adenta)">
+              <button id="qa-home-fav-add" type="button" class="btn btn-sm btn-outline-light rounded-pill text-nowrap">Save</button>
+            </div>
+            <div id="qa-home-fav-list" class="qa-home-fav-list mb-2" aria-label="Favorite locations"></div>
+            <article class="qa-home-action-card p-3 rounded-3" id="qa-home-action-card">
+              <p class="small text-secondary mb-1">Selected area</p>
+              <p id="qa-home-action-title" class="small text-white fw-semibold mb-1">No favorite selected</p>
+              <p id="qa-home-action-meta" class="small text-secondary mb-2">Save a location to personalize quick actions.</p>
+              <div class="d-flex flex-wrap gap-2">
+                <a id="qa-home-action-reports" class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:reports' %}">Open reports</a>
+                <a id="qa-home-action-map" class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:map' %}">Open map</a>
+                <a id="qa-home-action-report" class="btn btn-sm btn-primary rounded-pill" href="{% url 'core:report' %}">Report issue</a>
+              </div>
+            </article>
+          </section>
+        </div>
+        <div class="col-xl-6">
+          <div class="qa-hero-panel p-4 p-md-5">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <div class="d-flex align-items-center gap-2">
+                <span class="qa-mock-dot" aria-hidden="true"></span>
+                <span class="small text-secondary">Live incident board</span>
+              </div>
+              <span class="small text-success">● Online</span>
+            </div>
+            <div class="d-grid gap-3 mb-4">
+              <div class="rounded-3 p-3 qa-home-live-card qa-home-live-card--outage">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="small fw-semibold text-white">Outage watch</span>
+                  <span class="badge rounded-pill text-bg-warning text-dark">Dumsor</span>
+                </div>
+                {% if latest_outages %}
+                  <ul id="qa-home-outage-list" class="list-unstyled mb-0 d-grid gap-2">
+                    {% for r in latest_outages %}
+                      <li class="qa-home-live-item">
+                        <p class="small text-white fw-semibold mb-1">{{ r.location }}</p>
+                        <p class="small text-secondary mb-0">{{ r.created_at|date:"D j M · H:i" }} · {{ r.get_status_display }}</p>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p id="qa-home-outage-empty" class="small text-secondary mb-0">No outage reports yet. Submit the first dumsor report to populate this panel.</p>
+                {% endif %}
+              </div>
+              <div class="rounded-3 p-3 qa-home-live-card qa-home-live-card--community">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="small fw-semibold text-white">Community reports</span>
+                  <span class="small text-accent">+{{ stats.reports_week }} this week</span>
+                </div>
+                {% if latest_reports %}
+                  <ul id="qa-home-community-list" class="list-unstyled mb-0 d-grid gap-2">
+                    {% for r in latest_reports %}
+                      <li class="qa-home-live-item">
+                        <p class="small text-white fw-semibold mb-1">{{ r.get_category_display }} · {{ r.location }}</p>
+                        <p class="small text-secondary mb-0">{{ r.created_at|date:"D j M · H:i" }} · {{ r.get_status_display }}</p>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p id="qa-home-community-empty" class="small text-secondary mb-0">No community reports yet. New reports will appear here instantly.</p>
+                {% endif %}
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="{% url 'core:sos' %}">SOS numbers</a>
+              <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="{% url 'core:chatbot' %}">Ask assistant</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# --- Features --- #}
+    <section id="features" class="qa-section-y border-top border-secondary-subtle" aria-labelledby="qa-features-heading">
+      <div class="qa-section-head mb-4 mb-lg-5">
+        <p class="qa-section-kicker mb-2">Features</p>
+        <h2 id="qa-features-heading" class="h1 fw-bold text-white mb-3">Everything citizens need, nothing noisy.</h2>
+        <p class="lead text-secondary mb-0">
+          Built for Ghana’s streets, campuses, markets, and homes — fast loads, readable type, and map-ready data.
+        </p>
+      </div>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        <div class="col">
+          <article class="qa-feature-card p-4 p-lg-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-white"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">Dumsor &amp; utilities</h3>
+            <p class="text-secondary small mb-0">Track outages, unstable power corridors, and utility stress so communities can plan.</p>
+          </article>
+        </div>
+        <div class="col">
+          <article class="qa-feature-card p-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3v18M5 10h14" stroke="currentColor" stroke-width="1.6" class="text-white"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">Traffic &amp; fuel queues</h3>
+            <p class="text-secondary small mb-0">Surface congestion, incidents, and station queues with location context commuters trust.</p>
+          </article>
+        </div>
+        <div class="col">
+          <article class="qa-feature-card p-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.6" class="text-white"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">Water &amp; flooding</h3>
+            <p class="text-secondary small mb-0">Capture shortages and flood risk early — better visibility for families and responders.</p>
+          </article>
+        </div>
+        <div class="col">
+          <article class="qa-feature-card p-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21s-6-5.5-6-10a6 6 0 1 1 12 0c0 4.5-6 10-6 10z" stroke="currentColor" stroke-width="1.6" class="text-white"/>
+                <circle cx="12" cy="11" r="2" fill="currentColor" class="text-secondary"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">Hospitals &amp; care</h3>
+            <p class="text-secondary small mb-0">Curated facility pointers and phone lines when minutes matter most.</p>
+          </article>
+        </div>
+        <div class="col">
+          <article class="qa-feature-card p-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.54 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.11a2 2 0 0 1 2.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.4" class="text-white"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">SOS &amp; helplines</h3>
+            <p class="text-secondary small mb-0">National and regional emergency numbers, always one tap away.</p>
+          </article>
+        </div>
+        <div class="col">
+          <article class="qa-feature-card p-4 h-100">
+            <div class="qa-feature-icon mb-3" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.6" class="text-white"/>
+                <path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.6" class="text-secondary"/>
+              </svg>
+            </div>
+            <h3 class="h5 text-white mb-2">Smart assistant</h3>
+            <p class="text-secondary small mb-0">Guided answers grounded in QuickAid data — built for low-friction help on the move.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    {# --- Live stats --- #}
+    <section id="stats" class="qa-section-y" aria-labelledby="qa-stats-heading">
+      <div class="qa-stat-slab p-4 p-lg-5">
+        <div class="row align-items-end g-4 mb-4 mb-lg-5">
+          <div class="col-lg-7">
+            <p class="qa-section-kicker mb-2">Live stats</p>
+            <h2 id="qa-stats-heading" class="h1 fw-bold text-white mb-2 mb-lg-0">Signals from the field</h2>
+            <p class="text-secondary mb-0">Numbers update from your database — perfect for demos, pilots, and ops reviews.</p>
+          </div>
+          <div class="col-lg-5 text-lg-end">
+            <a class="btn btn-outline-light rounded-pill px-4" href="{% url 'core:reports' %}">Browse reports</a>
+          </div>
+        </div>
+        <div class="row row-cols-2 row-cols-lg-4 g-4">
+          <div class="col">
+            <p class="text-secondary small text-uppercase fw-semibold mb-2">Reports</p>
+            <p class="qa-stat-value text-white mb-1"><span class="qa-counter" data-target="{{ stats.reports_total }}">0</span></p>
+            <p class="small text-secondary mb-0">All time</p>
+          </div>
+          <div class="col">
+            <p class="text-secondary small text-uppercase fw-semibold mb-2">This week</p>
+            <p class="qa-stat-value text-white mb-1"><span class="qa-counter" data-target="{{ stats.reports_week }}">0</span></p>
+            <p class="small text-secondary mb-0">New activity</p>
+          </div>
+          <div class="col">
+            <p class="text-secondary small text-uppercase fw-semibold mb-2">Pending triage</p>
+            <p class="qa-stat-value text-white mb-1"><span class="qa-counter" data-target="{{ stats.reports_pending }}">0</span></p>
+            <p class="small text-secondary mb-0">Awaiting review</p>
+          </div>
+          <div class="col">
+            <p class="text-secondary small text-uppercase fw-semibold mb-2">Safety index</p>
+            <p class="qa-stat-value text-white mb-1">
+              <span class="qa-counter" data-target="{{ stats.hospitals_total }}">0</span><span class="fs-4 text-secondary">/</span><span class="qa-counter" data-target="{{ stats.contacts_total }}">0</span>
+            </p>
+            <p class="small text-secondary mb-0">Hospitals · SOS lines</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# --- Trust layer --- #}
+    <section id="trust" class="qa-section-y border-top border-secondary-subtle" aria-labelledby="qa-trust-heading">
+      <div class="qa-trust-slab p-4 p-lg-5">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+          <div>
+            <p class="qa-section-kicker mb-2">Trust layer</p>
+            <h2 id="qa-trust-heading" class="h2 fw-bold text-white mb-2">Verified signals, not rumor noise</h2>
+            <p class="text-secondary mb-0">Operator review metrics help users know what is confirmed versus still under community triage.</p>
+          </div>
+          <a class="btn btn-outline-light rounded-pill px-4" href="{% url 'core:reports' %}">Open report feed</a>
+        </div>
+        <div class="row row-cols-1 row-cols-md-3 g-3 g-lg-4">
+          <div class="col">
+            <article class="qa-trust-card h-100">
+              <p class="small text-uppercase text-secondary fw-semibold mb-2">Verified by operator</p>
+              <p class="qa-trust-value text-white mb-1"><span class="qa-counter" data-target="{{ trust_counts.verified_by_operator }}">0</span></p>
+              <p class="small text-secondary mb-0">Reports moved beyond pending review.</p>
+            </article>
+          </div>
+          <div class="col">
+            <article class="qa-trust-card h-100">
+              <p class="small text-uppercase text-secondary fw-semibold mb-2">Community reports pending</p>
+              <p class="qa-trust-value text-white mb-1"><span class="qa-counter" data-target="{{ trust_counts.community_pending }}">0</span></p>
+              <p class="small text-secondary mb-0">Still awaiting operator verification.</p>
+            </article>
+          </div>
+          <div class="col">
+            <article class="qa-trust-card h-100">
+              <p class="small text-uppercase text-secondary fw-semibold mb-2">Resolved today</p>
+              <p class="qa-trust-value text-white mb-1"><span class="qa-counter" data-target="{{ trust_counts.resolved_today }}">0</span></p>
+              <p class="small text-secondary mb-0">Marked resolved or closed today.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# --- How it works --- #}
+    <section id="how" class="qa-section-y border-top border-secondary-subtle" aria-labelledby="qa-how-heading">
+      <div class="row g-5 align-items-start">
+        <div class="col-lg-4">
+          <p class="qa-section-kicker mb-2">How it works</p>
+          <h2 id="qa-how-heading" class="h1 fw-bold text-white mb-3">From alert to action in three beats.</h2>
+          <p class="text-secondary mb-0">
+            A calm flow for stressed moments: capture, verify, and broadcast — without losing the human story in the data.
+          </p>
+        </div>
+        <div class="col-lg-8">
+          <ol class="list-unstyled d-grid gap-4 m-0">
+            <li class="d-flex gap-4">
+              <span class="qa-step-index flex-shrink-0">1</span>
+              <div>
+                <h3 class="h5 text-white mb-2">Report or explore</h3>
+                <p class="text-secondary mb-0">Submit an issue with location and category, or scan the dashboard and map for what’s unfolding near you.</p>
+              </div>
+            </li>
+            <li class="d-flex gap-4">
+              <span class="qa-step-index flex-shrink-0">2</span>
+              <div>
+                <h3 class="h5 text-white mb-2">Operators triage fast</h3>
+                <p class="text-secondary mb-0">Staff update statuses, merge duplicates, and prioritise life-safety items through Django admin built for speed.</p>
+              </div>
+            </li>
+            <li class="d-flex gap-4">
+              <span class="qa-step-index flex-shrink-0">3</span>
+              <div>
+                <h3 class="h5 text-white mb-2">Community stays informed</h3>
+                <p class="text-secondary mb-0">Citizens see verified signals, SOS pathways, and assistant guidance — optimised for mobile networks.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    {# --- Testimonials --- #}
+    <section id="stories" class="qa-section-y" aria-labelledby="qa-stories-heading">
+      <div class="qa-section-head mb-4 mb-lg-5">
+        <p class="qa-section-kicker mb-2">Testimonials</p>
+        <h2 id="qa-stories-heading" class="h1 fw-bold text-white mb-3">Trusted where reliability matters.</h2>
+        <p class="lead text-secondary mb-0">Illustrative pilot voices — swap with real partners as you scale.</p>
+      </div>
+      <div class="row row-cols-1 row-cols-lg-3 g-4">
+        <div class="col">
+          <figure class="qa-quote-card p-4 h-100 mb-0">
+            <p class="qa-stars mb-3" aria-label="5 out of 5 stars">★★★★★</p>
+            <blockquote class="blockquote fs-6 text-white mb-4">
+              “We finally have one place students check before leaving campus — power, water, and traffic in plain language.”
+            </blockquote>
+            <figcaption class="small text-secondary mb-0">
+              <span class="text-white fw-semibold">Ama K.</span> · Student union lead, Kumasi
+            </figcaption>
+          </figure>
+        </div>
+        <div class="col">
+          <figure class="qa-quote-card p-4 h-100 mb-0">
+            <p class="qa-stars mb-3" aria-label="5 out of 5 stars">★★★★★</p>
+            <blockquote class="blockquote fs-6 text-white mb-4">
+              “The SOS sheet alone saved us minutes on a night shift. Clean layout, serious typography.”
+            </blockquote>
+            <figcaption class="small text-secondary mb-0">
+              <span class="text-white fw-semibold">Kwesi O.</span> · Fleet supervisor, Accra
+            </figcaption>
+          </figure>
+        </div>
+        <div class="col">
+          <figure class="qa-quote-card p-4 h-100 mb-0">
+            <p class="qa-stars mb-3" aria-label="5 out of 5 stars">★★★★★</p>
+            <blockquote class="blockquote fs-6 text-white mb-4">
+              “We want citizens to feel looked after, not overwhelmed. QuickAid hits that balance.”
+            </blockquote>
+            <figcaption class="small text-secondary mb-0">
+              <span class="text-white fw-semibold">Efua T.</span> · Civic innovation fellow
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    {# --- CTA --- #}
+    <section id="cta" class="qa-section-y pb-0" aria-labelledby="qa-cta-heading">
+      <div class="qa-cta p-4 p-md-5">
+        <div class="qa-cta-inner row align-items-center g-4">
+          <div class="col-lg-8">
+            <h2 id="qa-cta-heading" class="display-6 fw-bold text-white mb-3">Ready when Ghana needs you.</h2>
+            <p class="lead text-white mb-0 opacity-75">
+              Open the dashboard, file your first report, or share QuickAid with your community WhatsApp groups.
+            </p>
+          </div>
+          <div class="col-lg-4 text-lg-end">
+            <div class="d-flex flex-column flex-sm-row flex-lg-column gap-2 justify-content-lg-end">
+              <a class="btn btn-light btn-lg rounded-pill fw-semibold px-4" href="{% url 'core:dashboard' %}">Launch dashboard</a>
+              <a class="btn btn-outline-light btn-lg rounded-pill fw-semibold px-4" href="{% url 'core:report' %}">Report an issue</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
