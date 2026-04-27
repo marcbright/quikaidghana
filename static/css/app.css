@@ -2549,3 +2549,31 @@ a.navbar-brand:hover .qa-logo-mark {
   color: #1e3a8a !important;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
+
+
+/* --- Report page light-mode label clarity --- */
+[data-bs-theme="light"] .qa-report .qa-report-label,
+[data-bs-theme="light"] .qa-report .form-label {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .qa-report .form-text,
+[data-bs-theme="light"] .qa-report .text-secondary,
+[data-bs-theme="light"] .qa-report-coords .text-secondary,
+[data-bs-theme="light"] .qa-report-coords-details summary {
+  color: #475569 !important;
+}
+
+[data-bs-theme="light"] .qa-report-coords {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.96), rgba(241, 246, 255, 0.92));
+}
+
+[data-bs-theme="light"] .qa-report .btn-outline-light,
+[data-bs-theme="light"] .qa-report-coords .btn-outline-light {
+  --bs-btn-color: #0f172a;
+  --bs-btn-border-color: rgba(15, 23, 42, 0.22);
+  --bs-btn-hover-color: #0f172a;
+  --bs-btn-hover-bg: rgba(59, 130, 246, 0.12);
+  --bs-btn-hover-border-color: rgba(37, 99, 235, 0.4);
+}

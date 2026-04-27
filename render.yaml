@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: quickaid-ghana
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120
+    healthCheckPath: /healthz/
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: quickaid-ghana.onrender.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://quickaid-ghana.onrender.com
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "1"
+      - key: DJANGO_SECURE_HSTS_SECONDS
+        value: "31536000"
+      - key: DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: "1"
+      - key: DJANGO_SECURE_HSTS_PRELOAD
+        value: "1"
+      - key: DJANGO_LOG_LEVEL
+        value: INFO
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: quickaid-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: quickaid-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: quickaid-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: quickaid-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: quickaid-db
+          property: password
+      - key: POSTGRES_SSLMODE
+        value: require
+      - key: POSTGRES_CONN_MAX_AGE
+        value: "60"
+
+databases:
+  - name: quickaid-db
+    plan: free
