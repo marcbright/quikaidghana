@@ -8,6 +8,7 @@ app_name = "core"
 urlpatterns = [
     path("", views.home, name="home"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("power-schedule/", views.power_schedule, name="power_schedule"),
     path("report/", views.report, name="report"),
     path("reports/", views.reports_list, name="reports"),
     path("chatbot/", views.chatbot, name="chatbot"),

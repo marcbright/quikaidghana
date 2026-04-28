@@ -6,6 +6,9 @@
     <a class="nav-link qa-nav-link{% if request.path == '/dashboard/' %} active{% endif %}" href="{% url 'core:dashboard' %}">Dashboard</a>
   </li>
   <li class="nav-item">
+    <a class="nav-link qa-nav-link{% if request.path == '/power-schedule/' %} active{% endif %}" href="{% url 'core:power_schedule' %}">Power schedule</a>
+  </li>
+  <li class="nav-item">
     <a class="nav-link qa-nav-link{% if request.path == '/report/' %} active{% endif %}" href="{% url 'core:report' %}">Report</a>
   </li>
   <li class="nav-item">

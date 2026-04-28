@@ -16,6 +16,40 @@
       </div>
     </div>
 
+    <div class="qa-dash-panel mb-4">
+      <div class="qa-dash-panel-head d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="h6 text-white mb-1">ECG Schedule Today</h2>
+          <p class="small text-secondary mb-0">Official schedule visibility and quick lookup</p>
+        </div>
+        <a class="btn btn-sm btn-outline-light rounded-pill" href="{% url 'core:power_schedule' %}">Search area</a>
+      </div>
+      <div class="qa-dash-panel-body">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <p class="qa-dash-card-label mb-2">Areas currently off</p>
+            <ul class="small text-secondary mb-0">
+              {% for row in schedule_today_off %}
+                <li>{{ row.area }} ({{ row.region }}) · {{ row.start_time|time:"H:i" }}-{{ row.end_time|time:"H:i" }}</li>
+              {% empty %}
+                <li>No scheduled outage active right now.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="col-lg-6">
+            <p class="qa-dash-card-label mb-2">Upcoming outages</p>
+            <ul class="small text-secondary mb-0">
+              {% for item in schedule_today_upcoming %}
+                <li>{{ item.row.area }} · starts in {{ item.starts_in_hours }}h ({{ item.row.start_time|time:"H:i" }})</li>
+              {% empty %}
+                <li>No further scheduled outages for today.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {# Metric cards #}
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 g-lg-4 mb-4 mb-lg-5">
       <div class="col">

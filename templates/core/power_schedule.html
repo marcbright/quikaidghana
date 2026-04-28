@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}ECG Power Schedule Tracker — QuickAid Ghana{% endblock %}
+
+{% block content %}
+  <section class="qa-power-page">
+    <div class="qa-power-hero mb-4">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+        <div>
+          <p class="qa-dash-kicker mb-2">ECG Power Schedule Tracker</p>
+          <h1 class="h2 fw-bold text-white mb-1">Check your area power status</h1>
+          <p class="text-secondary mb-0">Find if lights are out now, upcoming today, or restored.</p>
+        </div>
+      </div>
+      <form method="get" class="row g-3 mt-1 qa-power-form">
+        <div class="col-lg-5">
+          <label class="form-label small text-secondary" for="power-q">Area / town / community</label>
+          <input id="power-q" name="q" value="{{ search_q }}" class="form-control" placeholder="e.g. Madina, Kasoa, Tema, Ho" list="qa-area-suggestions">
+          <datalist id="qa-area-suggestions">
+            {% for area in area_suggestions %}
+              <option value="{{ area }}"></option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label small text-secondary" for="power-region">Region</label>
+          <select id="power-region" class="form-select" name="region">
+            <option value="">All regions</option>
+            {% for region in regions %}
+              <option value="{{ region }}" {% if selected_region == region %}selected{% endif %}>{{ region }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-2">
+          <label class="form-label small text-secondary" for="power-date">Date</label>
+          <input id="power-date" name="date" type="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-lg-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">Check status</button>
+        </div>
+      </form>
+    </div>
+
+    {% if has_query and matched_areas %}
+      <div class="qa-dash-panel mb-4">
+        <div class="qa-dash-panel-body">
+          <p class="small text-secondary mb-2">Top area matches</p>
+          <div class="d-flex flex-wrap gap-2">
+            {% for m in matched_areas %}
+              <span class="badge rounded-pill qa-dash-pill">{{ m }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if no_data %}
+      <div class="qa-power-status-card qa-power-status-card--none mb-4">
+        <div class="d-flex align-items-center gap-3">
+          <span class="qa-power-icon">○</span>
+          <div>
+            <p class="mb-1 fw-semibold">No data found</p>
+            <p class="mb-0 small">Try another area spelling, date, or region filter.</p>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="row g-3">
+      {% for item in page_obj.object_list %}
+        <div class="col-lg-6">
+          <article class="qa-power-status-card qa-power-status-card--{{ item.status_color }}">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <p class="fw-semibold mb-1">{{ item.row.area }}</p>
+                <p class="small mb-1">{{ item.row.region }}{% if item.row.district %} · {{ item.row.district }}{% endif %}</p>
+                <p class="small mb-0">{{ item.row.outage_date|date:"D, Y-m-d" }} · {{ item.row.start_time|time:"H:i" }} - {{ item.row.end_time|time:"H:i" }}</p>
+              </div>
+              <span class="qa-power-icon">
+                {% if item.status == "active" %}⚡{% elif item.status == "upcoming" %}⏳{% elif item.status == "ended" %}✓{% else %}○{% endif %}
+              </span>
+            </div>
+            <p class="mt-3 mb-0 fw-semibold">{{ item.status_text }}</p>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?q={{ search_q|urlencode }}&region={{ selected_region|urlencode }}&date={{ selected_date|date:'Y-m-d' }}&page={{ page_obj.previous_page_number }}">Prev</a></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?q={{ search_q|urlencode }}&region={{ selected_region|urlencode }}&date={{ selected_date|date:'Y-m-d' }}&page={{ page_obj.next_page_number }}">Next</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+
+    <p class="small text-secondary mt-4 mb-0">Based on official ECG published schedule. Schedules may change.</p>
+  </section>
+{% endblock %}
+

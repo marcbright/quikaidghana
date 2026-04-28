@@ -1,9 +1,11 @@
 import csv
+import difflib
 import json
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
@@ -21,6 +23,7 @@ from .models import (
     EmergencyContact,
     Feedback,
     Hospital,
+    PowerSchedule,
     Report,
     ReportCategory,
     ReportStatus,
@@ -435,6 +438,19 @@ def dashboard(request):
             )
     alert_rail = sorted(alert_rail, key=lambda item: item["severity_score"], reverse=True)[:6]
 
+    now_local = timezone.localtime()
+    schedule_today_qs = PowerSchedule.objects.filter(outage_date=now_local.date())
+    areas_currently_off = []
+    upcoming_outages = []
+    for row in schedule_today_qs.order_by("start_time", "area"):
+        start_dt, end_dt = _schedule_row_bounds(row)
+        if start_dt <= now_local < end_dt:
+            areas_currently_off.append(row)
+        elif now_local < start_dt:
+            upcoming_outages.append({"row": row, "starts_in_hours": round((start_dt - now_local).total_seconds() / 3600, 1)})
+    areas_currently_off = areas_currently_off[:5]
+    upcoming_outages = upcoming_outages[:5]
+
     if request.GET.get("export") == "csv":
         filename_suffix = selected_city if selected_city != "all" else "all-cities"
         response = HttpResponse(content_type="text/csv")
@@ -483,6 +499,8 @@ def dashboard(request):
             "map_ready_count": map_ready_count,
             "map_ready_percent": map_ready_percent,
             "alert_rail": alert_rail,
+            "schedule_today_off": areas_currently_off,
+            "schedule_today_upcoming": upcoming_outages,
         },
     )
 
@@ -490,6 +508,134 @@ def dashboard(request):
 @staff_member_required(login_url="/admin/login/")
 def dashboard_pending_admin_queue(request):
     return redirect(f"{reverse('admin:core_report_changelist')}?status__exact=pending")
+
+
+def _schedule_row_bounds(row: PowerSchedule):
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(row.outage_date, row.start_time), tz)
+    end_dt = timezone.make_aware(datetime.combine(row.outage_date, row.end_time), tz)
+    if end_dt <= start_dt:
+        end_dt += timedelta(days=1)
+    return start_dt, end_dt
+
+
+def _normalize_text(value: str):
+    text = (value or "").lower().strip()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def _ranked_area_matches(query: str, candidates):
+    query_n = _normalize_text(query)
+    if len(query_n) < 2:
+        return []
+    ranked = []
+    seen = set()
+    for c in candidates:
+        area = c.area
+        key = area.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        area_n = _normalize_text(area)
+        score = 0
+        if query_n in area_n:
+            score = 95 if area_n.startswith(query_n) else 80
+        else:
+            sim = difflib.SequenceMatcher(None, query_n, area_n).ratio()
+            if sim >= 0.74:
+                score = int(sim * 100)
+        if score > 0:
+            ranked.append((score, area))
+    ranked.sort(key=lambda x: (-x[0], x[1]))
+    return [r[1] for r in ranked]
+
+
+@require_http_methods(["GET"])
+def power_schedule(request):
+    q = (request.GET.get("q") or "").strip()
+    region = (request.GET.get("region") or "").strip()
+    date_raw = (request.GET.get("date") or "").strip()
+    today = timezone.localdate()
+    selected_date = today
+    if date_raw:
+        try:
+            selected_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = today
+
+    qs = PowerSchedule.objects.all()
+    if region:
+        qs = qs.filter(region__iexact=region)
+    qs = qs.filter(outage_date=selected_date)
+
+    area_suggestions = list(
+        PowerSchedule.objects.values_list("area", flat=True).distinct().order_by("area")[:2500]
+    )
+    matched_areas = []
+    if q:
+        matched_areas = _ranked_area_matches(q, list(qs))
+        if matched_areas:
+            qs = qs.filter(area__in=matched_areas)
+        else:
+            qs = qs.none()
+
+    now_local = timezone.localtime()
+    status_rows = []
+    for row in qs.order_by("area", "start_time"):
+        start_dt, end_dt = _schedule_row_bounds(row)
+        status = "upcoming"
+        countdown_hours = None
+        status_text = "Power Expected / No Scheduled Outage Now"
+        status_color = "success"
+        if row.outage_date != now_local.date():
+            status = "scheduled"
+            status_text = "Scheduled outage on selected date"
+            status_color = "secondary"
+        else:
+            if start_dt <= now_local < end_dt:
+                status = "active"
+                status_text = "Scheduled Lights Out Now"
+                status_color = "danger"
+            elif now_local < start_dt:
+                status = "upcoming"
+                countdown_hours = round((start_dt - now_local).total_seconds() / 3600, 1)
+                status_text = f"Lights Out Starts in {countdown_hours} hours"
+                status_color = "warning"
+            elif now_local >= end_dt:
+                status = "ended"
+                status_text = "Power Should Be Restored"
+                status_color = "success"
+        status_rows.append(
+            {
+                "row": row,
+                "status": status,
+                "status_text": status_text,
+                "status_color": status_color,
+                "countdown_hours": countdown_hours,
+            }
+        )
+
+    paginator = Paginator(status_rows, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    regions = list(PowerSchedule.objects.values_list("region", flat=True).distinct().order_by("region"))
+
+    return render(
+        request,
+        "core/power_schedule.html",
+        {
+            "page_obj": page_obj,
+            "search_q": q,
+            "selected_region": region,
+            "selected_date": selected_date,
+            "regions": regions,
+            "area_suggestions": area_suggestions,
+            "has_query": bool(q),
+            "matched_areas": matched_areas[:8],
+            "no_data": len(status_rows) == 0,
+        },
+    )
 
 
 @require_http_methods(["GET"])

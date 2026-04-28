@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import EmergencyContact, Feedback, Hospital, Report, ReportStatus
+from .models import EmergencyContact, Feedback, Hospital, PowerSchedule, Report, ReportStatus
 
 
 @admin.register(Report)
@@ -178,6 +178,25 @@ class FeedbackAdmin(admin.ModelAdmin):
         if obj is None:
             return ()
         return self.readonly_fields
+
+
+@admin.register(PowerSchedule)
+class PowerScheduleAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "region",
+        "district",
+        "area",
+        "outage_date",
+        "start_time",
+        "end_time",
+        "source_file",
+    )
+    list_display_links = ("id", "area")
+    list_filter = ("region", "outage_date")
+    search_fields = ("region", "district", "area", "notes", "source_file")
+    ordering = ("outage_date", "start_time", "region", "area")
+    readonly_fields = ("created_at",)
 
 
 admin.site.site_header = "QuickAid Ghana"

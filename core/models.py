@@ -130,3 +130,31 @@ class Feedback(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} — {self.created_at:%Y-%m-%d}"
+
+
+class PowerSchedule(models.Model):
+    """Normalized ECG load-management schedule row per area/time window."""
+
+    region = models.CharField(max_length=64, db_index=True)
+    district = models.CharField(max_length=128, blank=True, db_index=True)
+    area = models.CharField(max_length=255, db_index=True)
+    outage_date = models.DateField(db_index=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    source_file = models.CharField(max_length=255)
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ("outage_date", "start_time", "region", "area")
+        indexes = [
+            models.Index(fields=["region", "outage_date"]),
+            models.Index(fields=["district", "outage_date"]),
+            models.Index(fields=["area", "outage_date"]),
+            models.Index(fields=["outage_date", "start_time"]),
+        ]
+        verbose_name = "Power schedule"
+        verbose_name_plural = "Power schedules"
+
+    def __str__(self) -> str:
+        return f"{self.area} ({self.region}) {self.outage_date:%Y-%m-%d} {self.start_time:%H:%M}-{self.end_time:%H:%M}"
